@@ -1,0 +1,4 @@
+backend/.env.local
+backend/.env.prod
+backend/.vscode
+backend/venv
