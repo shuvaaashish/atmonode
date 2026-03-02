@@ -1,0 +1,103 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include "DHT.h"
+#include <ArduinoJson.h>
+
+// ================== CONFIGURATION ==================
+#define DHTPIN 4
+#define DHTTYPE DHT11
+
+const char* ssid = "Abinash_DHInternet";
+const char* password = "DHInternet@21149598";
+
+// Your Laptop's IP and the Token from your Django Admin
+const char* serverUrl = "http://192.168.18.63:8000/api/readings/";
+
+const char* authToken = "c37e30ace5389d5dfdebc3d58a9a6ddf1ab37b56";
+
+// ================== OBJECTS ==================
+DHT dht(DHTPIN, DHTTYPE);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  
+  // Initialize LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("ATMONODE BOOTING");
+
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi Connected!");
+  lcd.clear();
+  lcd.print("WiFi Online");
+  delay(2000);
+}
+
+void loop() {
+  // 1. Read Sensors
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  // 2. Update Local LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: "); lcd.print(t);lcd.print((char)223); lcd.print("C  ");
+  lcd.setCursor(0, 1);
+  lcd.print("Hum : "); lcd.print(h); lcd.print("%  ");
+
+  // 3. Send Data to Django
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    
+    // Start connection
+    http.begin(serverUrl);
+    
+    // Add Headers (Crucial for Django Auth)
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Authorization", "Token c37e30ace5389d5dfdebc3d58a9a6ddf1ab37b56");
+
+    // Create JSON Payload
+    StaticJsonDocument<200> doc;
+    doc["node"] = 1;          // The ID of "Device_01" from your admin
+    doc["temperature"] = t;
+    doc["humidity"] = h;
+
+    String requestBody;
+    serializeJson(doc, requestBody);
+
+    // POST the data
+    int httpResponseCode = http.POST(requestBody);
+
+    // 4. Handle Response
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+      if(httpResponseCode == 201) {
+         Serial.println("Data saved successfully in Django!");
+      }
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+
+    http.end();
+  }
+
+  delay(10000); // Wait 10 seconds before next update
+}
