@@ -1,0 +1,35 @@
+name: Backend CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-cd.yml'
+
+concurrency:
+  group: backend-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to DigitalOcean VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /root/shuva/atmonode
+            git fetch --all
+            git reset --hard origin/main
+            cd backend
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            docker compose exec -T django-web python manage.py migrate --noinput
+            docker image prune -f
