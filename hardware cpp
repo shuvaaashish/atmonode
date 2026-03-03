@@ -4,34 +4,41 @@
 #include <LiquidCrystal_I2C.h>
 #include "DHT.h"
 #include <ArduinoJson.h>
+#include <esp_system.h>
 
-// ================== CONFIGURATION ==================
+
 #define DHTPIN 4
 #define DHTTYPE DHT11
+#define MQ135_PIN 34
 
 const char* ssid = "Abinash_DHInternet";
 const char* password = "DHInternet@21149598";
 
-// Your Laptop's IP and the Token from your Django Admin
 const char* serverUrl = "http://192.168.18.63:8000/api/readings/";
 
-const char* authToken = "c37e30ace5389d5dfdebc3d58a9a6ddf1ab37b56";
+const char* deviceToken = "CHANGE_ME_SHARED_DEVICE_TOKEN";
 
-// ================== OBJECTS ==================
 DHT dht(DHTPIN, DHTTYPE);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
+String deviceUid;
+
+String getDeviceUid() {
+  uint64_t chipId = ESP.getEfuseMac();
+  char buffer[17];
+  snprintf(buffer, sizeof(buffer), "%04X%08X", (uint16_t)(chipId >> 32), (uint32_t)chipId);
+  return String(buffer);
+}
 
 void setup() {
   Serial.begin(115200);
   dht.begin();
+  deviceUid = getDeviceUid();
   
-  // Initialize LCD
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.print("ATMONODE BOOTING");
 
-  // Connect to WiFi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -40,51 +47,58 @@ void setup() {
   }
 
   Serial.println("\nWiFi Connected!");
+  Serial.print("Device UID: ");
+  Serial.println(deviceUid);
   lcd.clear();
   lcd.print("WiFi Online");
   delay(2000);
 }
 
 void loop() {
-  // 1. Read Sensors
   float h = dht.readHumidity();
   float t = dht.readTemperature();
+  int mq135Raw = analogRead(MQ135_PIN);
+  float pollutionPpm = (mq135Raw / 4095.0f) * 1000.0f;
 
   if (isnan(h) || isnan(t)) {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
 
-  // 2. Update Local LCD
   lcd.setCursor(0, 0);
   lcd.print("Temp: "); lcd.print(t);lcd.print((char)223); lcd.print("C  ");
   lcd.setCursor(0, 1);
-  lcd.print("Hum : "); lcd.print(h); lcd.print("%  ");
+  lcd.print("AQI : "); lcd.print((int)pollutionPpm); lcd.print("ppm ");
 
-  // 3. Send Data to Django
+  Serial.print("Temp: ");
+  Serial.print(t);
+  Serial.print(" C, Humidity: ");
+  Serial.print(h);
+  Serial.print(" %, MQ135 Raw: ");
+  Serial.print(mq135Raw);
+  Serial.print(", Pollution: ");
+  Serial.print(pollutionPpm);
+  Serial.println(" ppm");
+
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     
-    // Start connection
     http.begin(serverUrl);
     
-    // Add Headers (Crucial for Django Auth)
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("Authorization", "Token c37e30ace5389d5dfdebc3d58a9a6ddf1ab37b56");
+    http.addHeader("X-Device-Token", deviceToken);
 
-    // Create JSON Payload
     StaticJsonDocument<200> doc;
-    doc["node"] = 1;          // The ID of "Device_01" from your admin
+    doc["device_uid"] = deviceUid;
     doc["temperature"] = t;
     doc["humidity"] = h;
+    doc["pollution"] = pollutionPpm;
 
     String requestBody;
     serializeJson(doc, requestBody);
 
-    // POST the data
     int httpResponseCode = http.POST(requestBody);
 
-    // 4. Handle Response
     if (httpResponseCode > 0) {
       Serial.print("HTTP Response code: ");
       Serial.println(httpResponseCode);
@@ -99,5 +113,5 @@ void loop() {
     http.end();
   }
 
-  delay(10000); // Wait 10 seconds before next update
+  delay(10000); 
 }
