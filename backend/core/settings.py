@@ -159,3 +159,5 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
 }
+
+DEVICE_INGEST_TOKEN = os.getenv('DEVICE_INGEST_TOKEN', '')

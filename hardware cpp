@@ -4,6 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 #include "DHT.h"
 #include <ArduinoJson.h>
+#include <esp_system.h>
 
 // ================== CONFIGURATION ==================
 #define DHTPIN 4
@@ -12,18 +13,28 @@
 const char* ssid = "Abinash_DHInternet";
 const char* password = "DHInternet@21149598";
 
-// Your Laptop's IP and the Token from your Django Admin
+// Your backend API endpoint
 const char* serverUrl = "http://192.168.18.63:8000/api/readings/";
 
-const char* authToken = "c37e30ace5389d5dfdebc3d58a9a6ddf1ab37b56";
+// Shared token for device ingestion (same on all ESP32 boards)
+const char* deviceToken = "CHANGE_ME_SHARED_DEVICE_TOKEN";
 
 // ================== OBJECTS ==================
 DHT dht(DHTPIN, DHTTYPE);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
+String deviceUid;
+
+String getDeviceUid() {
+  uint64_t chipId = ESP.getEfuseMac();
+  char buffer[17];
+  snprintf(buffer, sizeof(buffer), "%04X%08X", (uint16_t)(chipId >> 32), (uint32_t)chipId);
+  return String(buffer);
+}
 
 void setup() {
   Serial.begin(115200);
   dht.begin();
+  deviceUid = getDeviceUid();
   
   // Initialize LCD
   lcd.init();
@@ -40,6 +51,8 @@ void setup() {
   }
 
   Serial.println("\nWiFi Connected!");
+  Serial.print("Device UID: ");
+  Serial.println(deviceUid);
   lcd.clear();
   lcd.print("WiFi Online");
   delay(2000);
@@ -68,13 +81,13 @@ void loop() {
     // Start connection
     http.begin(serverUrl);
     
-    // Add Headers (Crucial for Django Auth)
+    // Add Headers
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("Authorization", "Token c37e30ace5389d5dfdebc3d58a9a6ddf1ab37b56");
+    http.addHeader("X-Device-Token", deviceToken);
 
     // Create JSON Payload
     StaticJsonDocument<200> doc;
-    doc["node"] = 1;          // The ID of "Device_01" from your admin
+    doc["device_uid"] = deviceUid;
     doc["temperature"] = t;
     doc["humidity"] = h;
 
