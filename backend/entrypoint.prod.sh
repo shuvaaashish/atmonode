@@ -14,4 +14,4 @@ python manage.py migrate --noinput
 echo "Starting Gunicorn..."
 # Change 8000 to 8080 to match DigitalOcean's default
 # Added --access-log - so you can see requests in the DO console
-exec python -m gunicorn --bind 0.0.0.0:8080 --workers 3 --access-log - core.wsgi:application
+exec python -m gunicorn --bind 0.0.0.0:8080 --workers 3 --access-logfile - core.wsgi:application
