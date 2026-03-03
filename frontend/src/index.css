@@ -1,0 +1,60 @@
+:root {
+  font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1f1147;
+  background: radial-gradient(circle at 10% 10%, #f3e8ff, #eef2ff 42%, #f5f3ff 72%, #f8fafc 100%);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: inherit;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  padding: 0.6em 1.2em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 10px 22px rgba(109, 40, 217, 0.28);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  box-shadow: 0 14px 28px rgba(109, 40, 217, 0.34);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px solid rgba(124, 58, 237, 0.25);
+}
+
+#root {
+  width: 100%;
+}
