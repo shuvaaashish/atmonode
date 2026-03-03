@@ -13,11 +13,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv('.env.local')
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env.local')
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,14 +26,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG') == 'True'
+DEBUG = os.getenv('DEBUG', 'False').strip().lower() in {'1', 'true', 'yes', 'on'}
 
-ALLOWED_HOSTS = ['*','192.168.18.63', '127.0.0.1', 'localhost']
-CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "http://192.168.18.63:8000"
+default_allowed_hosts = '127.0.0.1,localhost,192.168.18.63'
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', default_allowed_hosts).split(',')
+    if host.strip()
 ]
+if DEBUG:
+    ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS + ['127.0.0.1', 'localhost']))
+
+default_csrf_trusted_origins = 'http://127.0.0.1:8000,http://localhost:8000,http://192.168.18.63:8000'
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', default_csrf_trusted_origins).split(',')
+    if origin.strip()
+]
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = list(
+        dict.fromkeys(CSRF_TRUSTED_ORIGINS + ['http://127.0.0.1:8000', 'http://localhost:8000'])
+    )
 
 
 AUTH_USER_MODEL = 'users.User'

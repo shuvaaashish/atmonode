@@ -28,12 +28,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Permissions must be set by ROOT before switching users
+RUN mkdir -p /app/staticfiles && chown -R appuser:appuser /app/staticfiles
 RUN chmod +x /app/entrypoint.prod.sh
 
 # Switch to safe user
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8080
 
 # Use the full path for the entrypoint
 ENTRYPOINT ["/app/entrypoint.prod.sh"]

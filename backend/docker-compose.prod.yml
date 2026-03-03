@@ -1,0 +1,10 @@
+services:
+  frontend-proxy:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.https.conf:/etc/nginx/nginx.conf:ro
+      - static_data:/static:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
