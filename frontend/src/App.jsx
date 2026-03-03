@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Thermometer, Droplets, MapPin, ShieldCheck } from 'lucide-react'
+import { MapPin, ShieldCheck } from 'lucide-react'
 import './App.css'
 import api from './api'
 import Auth from './auth'
@@ -97,6 +97,7 @@ function SyncStatus({ lastSyncedAt, hasError }) {
 function App() {
   const TEMPERATURE_HIGH_THRESHOLD = 30
   const HUMIDITY_HIGH_THRESHOLD = 70
+  const POLLUTION_HIGH_THRESHOLD = 400
 
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => Boolean(localStorage.getItem('authToken')),
@@ -351,9 +352,55 @@ function App() {
   const latestReading = readings.length > 0 ? readings[0] : null
   const latestTemperature = Number(latestReading?.temperature)
   const latestHumidity = Number(latestReading?.humidity)
+  const latestPollution = Number(latestReading?.pollution)
   const isTempHigh = Number.isFinite(latestTemperature) && latestTemperature >= TEMPERATURE_HIGH_THRESHOLD
   const isHumidityHigh = Number.isFinite(latestHumidity) && latestHumidity >= HUMIDITY_HIGH_THRESHOLD
+  const isPollutionHigh = Number.isFinite(latestPollution) && latestPollution >= POLLUTION_HIGH_THRESHOLD
   const latestTimestamp = latestReading?.timestamp ?? latestReading?.created_at ?? latestReading?.time
+
+  const dailyAverages = useMemo(() => {
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const dateLabelFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+
+    const getAverage = (items, key) => {
+      const values = items
+        .map((entry) => Number(entry[key]))
+        .filter((value) => Number.isFinite(value))
+
+      if (values.length === 0) {
+        return null
+      }
+
+      return values.reduce((sum, value) => sum + value, 0) / values.length
+    }
+
+    return Array.from({ length: 5 }, (_, index) => {
+      const dayOffset = index + 1
+      const dayStart = new Date(startOfToday)
+      dayStart.setDate(startOfToday.getDate() - dayOffset)
+      const dayEnd = new Date(dayStart)
+      dayEnd.setDate(dayStart.getDate() + 1)
+
+      const dayReadings = readings.filter((item) => {
+        const timestamp = item.timestamp ?? item.created_at ?? item.time
+        if (!timestamp) {
+          return false
+        }
+
+        const readingTime = new Date(timestamp).getTime()
+        return Number.isFinite(readingTime) && readingTime >= dayStart.getTime() && readingTime < dayEnd.getTime()
+      })
+
+      return {
+        label: dayOffset === 1 ? `Yesterday (${dateLabelFormatter.format(dayStart)})` : dateLabelFormatter.format(dayStart),
+        temperature: getAverage(dayReadings, 'temperature'),
+        humidity: getAverage(dayReadings, 'humidity'),
+        pollution: getAverage(dayReadings, 'pollution'),
+        hasData: dayReadings.length > 0,
+      }
+    })
+  }, [readings])
 
   return (
     <main className="dashboard">
@@ -384,7 +431,6 @@ function App() {
         <section className="latest-grid">
           <article className={`latest-card ${isTempHigh ? 'latest-temp-high' : 'latest-temp-low'}`}>
             <div className="latest-header">
-              <Thermometer size={20} />
               <h3>Latest Temperature</h3>
             </div>
             <p className="latest-value">{Number.isFinite(latestTemperature) ? `${latestTemperature.toFixed(1)}°C` : '--'}</p>
@@ -393,11 +439,18 @@ function App() {
 
           <article className={`latest-card ${isHumidityHigh ? 'latest-humidity-high' : 'latest-humidity-low'}`}>
             <div className="latest-header">
-              <Droplets size={20} />
               <h3>Latest Humidity</h3>
             </div>
             <p className="latest-value">{Number.isFinite(latestHumidity) ? `${latestHumidity.toFixed(1)}%` : '--'}</p>
             <p className="latest-state">{isHumidityHigh ? 'High humidity' : 'Normal humidity'}</p>
+          </article>
+
+          <article className={`latest-card ${isPollutionHigh ? 'latest-pollution-high' : 'latest-pollution-low'}`}>
+            <div className="latest-header">
+              <h3>Latest Pollution</h3>
+            </div>
+            <p className="latest-value">{Number.isFinite(latestPollution) ? `${latestPollution.toFixed(1)} ppm` : '--'}</p>
+            <p className="latest-state">{isPollutionHigh ? 'High pollution' : 'Normal pollution'}</p>
           </article>
         </section>
       )}
@@ -515,38 +568,36 @@ function App() {
             readings={readings}
             valueKey="humidity"
           />
+          <TrendChart
+            title={`Pollution vs Time (${selectedLocation})`}
+            color="#4c1d95"
+            unit=" ppm"
+            readings={readings}
+            valueKey="pollution"
+          />
         </section>
       )}
 
-      {!loading && !error && activeView === 'dashboard' && selectedLocation && readings.length > 0 && (
+      {!loading && !error && activeView === 'dashboard' && selectedLocation && (
         <section className="grid">
-          {readings.slice(0, 6).map((item, index) => {
-            const timestamp = item.timestamp ?? item.created_at ?? item.time
-            const temperature = item.temperature ?? item.temp ?? '--'
-            const humidity = item.humidity ?? '--'
-
-            return (
-              <article className="card" key={item.id ?? index}>
-                <div className="row">
-                  <Thermometer size={18} />
-                  <span>Temperature: {temperature}°C</span>
-                </div>
-                <div className="row">
-                  <Droplets size={18} />
-                  <span>Humidity: {humidity}%</span>
-                </div>
-                <div className="row">
-                  <span>
-                    Time: {timestamp ? formatter.format(new Date(timestamp)) : '--'}
-                  </span>
-                </div>
-              </article>
-            )
-          })}
+          {dailyAverages.map((day, index) => (
+            <article className="card" key={index}>
+              <h3>{day.label}</h3>
+              <div className="row">
+                <span>Avg Temperature: {Number.isFinite(day.temperature) ? `${day.temperature.toFixed(1)}°C` : '--'}</span>
+              </div>
+              <div className="row">
+                <span>Avg Humidity: {Number.isFinite(day.humidity) ? `${day.humidity.toFixed(1)}%` : '--'}</span>
+              </div>
+              <div className="row">
+                <span>Avg Pollution: {Number.isFinite(day.pollution) ? `${day.pollution.toFixed(1)} ppm` : '--'}</span>
+              </div>
+            </article>
+          ))}
         </section>
       )}
 
-      {!loading && !error && activeView === 'dashboard' && selectedLocation && readings.length === 0 && (
+      {!loading && !error && activeView === 'dashboard' && selectedLocation && !dailyAverages.some((day) => day.hasData) && (
         <p>No sensor data available for this location.</p>
       )}
     </main>

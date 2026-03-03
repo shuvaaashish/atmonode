@@ -35,7 +35,7 @@ class NodeAdmin(admin.ModelAdmin):
 @admin.register(Reading)
 class ReadingAdmin(admin.ModelAdmin):
     # Display the most important data points
-    list_display = ('id', 'get_node_name', 'temperature', 'humidity', 'timestamp')
+    list_display = ('id', 'get_node_name', 'temperature', 'humidity', 'pollution', 'timestamp')
     # Filter by node or date (great for checking specific sensors)
     list_filter = ('node', 'timestamp')
     # Make it read-only in admin so you don't accidentally "fake" data

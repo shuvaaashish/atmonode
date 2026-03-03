@@ -51,11 +51,11 @@ class Reading(models.Model):
     node = models.ForeignKey(Node, on_delete=models.CASCADE, related_name='readings')
     temperature = models.FloatField()
     humidity = models.FloatField()
-    # Using auto_now_add is perfect for time-series graphing
+    pollution = models.FloatField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp'] # Important for fetching the "latest" data point
+        ordering = ['-timestamp'] 
 
     def __str__(self):
         node_name = str(self.node.name)

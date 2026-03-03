@@ -34,10 +34,11 @@ class GrantNodeAccessSerializer(serializers.Serializer):
 
 class ReadingSerializer(serializers.ModelSerializer):
     device_uid = serializers.CharField(write_only=True, required=False)
+    pollution = serializers.FloatField(required=False, allow_null=True)
 
     class Meta:
         model = Reading
-        fields = ['id', 'node', 'device_uid', 'temperature', 'humidity', 'timestamp']
+        fields = ['id', 'node', 'device_uid', 'temperature', 'humidity', 'pollution', 'timestamp']
         read_only_fields = ['timestamp']
         extra_kwargs = {
             'node': {'required': False},
