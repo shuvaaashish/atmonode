@@ -43,3 +43,11 @@ class ReadingSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'node': {'required': False},
         }
+
+    def create(self, validated_data):
+        validated_data.pop('device_uid', None)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.pop('device_uid', None)
+        return super().update(instance, validated_data)
