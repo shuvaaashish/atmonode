@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include "DHT.h"
@@ -14,9 +15,9 @@
 const char* ssid = "Abinash_DHInternet";
 const char* password = "DHInternet@21149598";
 
-const char* serverUrl = "http://192.168.18.63:8000/api/readings/";
+const char* serverUrl = "https://atmonode.phuyalgaurav.com.np/api/readings/";
 
-const char* deviceToken = "CHANGE_ME_SHARED_DEVICE_TOKEN";
+const char* authToken = "e25712428dd4ed38fc39ebb20d28826ac889c926";
 
 DHT dht(DHTPIN, DHTTYPE);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -47,6 +48,8 @@ void setup() {
   }
 
   Serial.println("\nWiFi Connected!");
+  Serial.print("Posting URL: ");
+  Serial.println(serverUrl);
   Serial.print("Device UID: ");
   Serial.println(deviceUid);
   lcd.clear();
@@ -81,12 +84,23 @@ void loop() {
   Serial.println(" ppm");
 
   if (WiFi.status() == WL_CONNECTED) {
+    WiFiClientSecure client;
+    client.setInsecure();
+
     HTTPClient http;
-    
-    http.begin(serverUrl);
-    
+    http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+
+    bool beginOk = http.begin(client, serverUrl);
+    if (!beginOk) {
+      Serial.println("HTTP begin failed");
+      delay(10000);
+      return;
+    }
+
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-Device-Token", deviceToken);
+    http.addHeader("Accept", "application/json");
+    String authHeader = String("Token ") + authToken;
+    http.addHeader("Authorization", authHeader);
 
     StaticJsonDocument<200> doc;
     doc["device_uid"] = deviceUid;
@@ -102,6 +116,9 @@ void loop() {
     if (httpResponseCode > 0) {
       Serial.print("HTTP Response code: ");
       Serial.println(httpResponseCode);
+      String responseBody = http.getString();
+      Serial.print("Response body: ");
+      Serial.println(responseBody);
       if(httpResponseCode == 201) {
          Serial.println("Data saved successfully in Django!");
       }

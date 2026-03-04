@@ -147,10 +147,19 @@ class ReadingListCreateView(generics.ListCreateAPIView):
         if user.is_authenticated:
             node = serializer.validated_data.get('node')
             if not node:
-                raise PermissionDenied('Node is required for authenticated requests.')
+                device_uid = serializer.validated_data.get('device_uid')
+                if not device_uid:
+                    raise PermissionDenied('Either node or device_uid is required for authenticated requests.')
+
+                try:
+                    node = Node.objects.get(device_uid=device_uid)
+                except Node.DoesNotExist:
+                    raise PermissionDenied('No registered node found for this device_uid.')
 
             has_write_access = (
-                node.owner_id == user.id
+                user.is_superuser
+                or user.is_staff
+                or node.owner_id == user.id
                 or NodeAccess.objects.filter(
                     node=node,
                     user=user,
