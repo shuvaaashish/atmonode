@@ -123,6 +123,8 @@ body {
   background: rgba(30, 64, 175, 0.09);
   color: #1e3a8a;
   border: 1px solid rgba(37, 99, 235, 0.26);
+  padding: 0.48em 0.95em;
+  font-size: 0.88rem;
 }
 
 .secondary-btn:hover {
@@ -374,9 +376,37 @@ body {
 }
 
 @media (max-width: 720px) {
+  .dashboard {
+    padding: 1.2rem 0.85rem 1.8rem;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .user-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .user-actions span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    padding: 0.75rem;
+  }
+
+  .latest-value {
+    font-size: 1.65rem;
   }
 
   .controls-grid {

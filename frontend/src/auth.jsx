@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import api from './api';
 
-export default function Auth({ setIsAuthenticated, setUser }) {
+export default function Auth({ onAuthSuccess }) {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -22,11 +22,13 @@ export default function Auth({ setIsAuthenticated, setUser }) {
             const { data } = await api.post(endpoint, payload);
 
             if (isLogin) {
-                const token = data.auth_token;
-                localStorage.setItem('authToken', token);
-                localStorage.setItem('userEmail', email);
-                setUser({ email });
-                setIsAuthenticated(true);
+                const token = data?.auth_token ?? data?.token ?? data?.key;
+                if (!token) {
+                    throw new Error('Login succeeded but token was not returned.');
+                }
+                const resolvedEmail = data?.email ?? email;
+                onAuthSuccess({ token, email: resolvedEmail });
+                window.location.reload();
             } else {
                 alert("Account created! Now login with your credentials.");
                 setIsLogin(true);

@@ -333,6 +333,18 @@ function App() {
     localStorage.removeItem('userEmail')
     setIsAuthenticated(false)
     setUser(null)
+    setActiveView('dashboard')
+    window.location.reload()
+  }
+
+  const handleAuthSuccess = ({ token, email }) => {
+    localStorage.setItem('authToken', token)
+    localStorage.setItem('userEmail', email)
+    setUser({ email })
+    setIsAuthenticated(true)
+    setActiveView('dashboard')
+    setError('')
+    setGrantMessage('')
   }
 
   const formatter = useMemo(
@@ -345,7 +357,7 @@ function App() {
   )
 
   if (!isAuthenticated) {
-    return <Auth setIsAuthenticated={setIsAuthenticated} setUser={setUser} />
+    return <Auth onAuthSuccess={handleAuthSuccess} />
   }
 
   const selectedNode = ownerNodes.find((node) => String(node.id) === selectedNodeId)
